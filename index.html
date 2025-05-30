@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Kod Tarayıcı</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 10px;
+      background-color: #f0f0f0;
+    }
+    #reader {
+      width: 100%;
+      max-width: 400px;
+      margin: auto;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>📷 QR Kod Tarayıcı</h1>
+  <div id="reader"></div>
+  <div id="result">Tarama sonucu burada görünecek.</div>
+
+  <script>
+    const resultElem = document.getElementById("result");
+
+    function onScanSuccess(decodedText, decodedResult) {
+      resultElem.innerText = "✅ Bulundu: " + decodedText;
+    }
+
+    function onScanFailure(error) {
+      // Sessizce geç; hata göstermek istersen buraya yaz.
+    }
+
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader",
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        rememberLastUsedCamera: true,
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+      },
+      /* verbose= */ false
+    );
+
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  </script>
+</body>
+</html>
