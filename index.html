@@ -2,57 +2,77 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QR Kod Tarayıcı</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arka Kameralı QR Kod Tarayıcı</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 10px;
-      background-color: #f0f0f0;
+      background-color: #f7f7f7;
     }
     #reader {
       width: 100%;
       max-width: 400px;
-      margin: auto;
+      margin: 0 auto;
     }
     #result {
       margin-top: 20px;
       font-size: 18px;
-      color: #333;
       word-wrap: break-word;
+      color: green;
     }
   </style>
 </head>
 <body>
-  <h1>📷 QR Kod Tarayıcı</h1>
+  <h1>📷 Arka Kameralı QR Kod Tarayıcı</h1>
   <div id="reader"></div>
-  <div id="result">Tarama sonucu burada görünecek.</div>
+  <div id="result">Tarama sonucu burada gözükecek</div>
 
   <script>
     const resultElem = document.getElementById("result");
 
     function onScanSuccess(decodedText, decodedResult) {
-      resultElem.innerText = "✅ Bulundu: " + decodedText;
+      resultElem.innerText = "✅ Bulunan QR Kod: " + decodedText;
+      // İstersen burada tarama durdurulabilir:
+      // html5QrcodeScanner.clear();
     }
 
     function onScanFailure(error) {
-      // Sessizce geç; hata göstermek istersen buraya yaz.
+      // Hata mesajlarını sessizce geç
+      // console.warn(`Tarama hatası: ${error}`);
     }
 
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-      },
-      /* verbose= */ false
-    );
+    // Arka kamerayı seçmek için kamera cihaz listesinden environment olanı seçiyoruz:
+    Html5Qrcode.getCameras().then(cameras => {
+      if (cameras && cameras.length) {
+        // Arka kamera var mı kontrolü:
+        const backCamera = cameras.find(camera => camera.label.toLowerCase().includes("back")) || cameras[0];
 
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          // Kamerayı doğrudan seçiyoruz:
+          cameraId: backCamera.id
+        };
+
+        const html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start(
+          backCamera.id,
+          config,
+          onScanSuccess,
+          onScanFailure
+        ).catch(err => {
+          alert("Kamera başlatılamadı: " + err);
+        });
+
+      } else {
+        alert("Cihazda kamera bulunamadı!");
+      }
+    }).catch(err => {
+      alert("Kamera bilgisi alınamadı: " + err);
+    });
   </script>
 </body>
 </html>
