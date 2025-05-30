@@ -1,78 +1,397 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Arka Kameralı QR Kod Tarayıcı</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 10px;
-      background-color: #f7f7f7;
-    }
-    #reader {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 18px;
-      word-wrap: break-word;
-      color: green;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wink Official - ComboBox Filtre & Barkod Tarayıcı</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 50px;
+            background: #e91e63;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        .navbar .menu-btn {
+            font-size: 26px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            margin-right: 20px;
+        }
+        .navbar span {
+            font-weight: bold;
+            font-size: 20px;
+        }
+        #sideMenu {
+            position: fixed;
+            top: 50px; left: -250px;
+            width: 220px; bottom: 0;
+            background: #fff;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            overflow-y: auto;
+            gap: 10px;
+            z-index: 9;
+            transition: left 0.3s ease;
+        }
+        #sideMenu.active { left: 0; }
+        #sideMenu input, #sideMenu select {
+            width: 100%; padding: 5px; font-size: 16px; box-sizing: border-box;
+        }
+        .filter-inputs { display: flex; gap: 10px; }
+        .filter-inputs input { flex: 1; }
+        #table-container {
+            position: fixed; top: 50px; left: 0; right: 0; bottom: 0;
+            background: white; overflow: auto; z-index: 5;
+            transition: left 0.3s ease, width 0.3s ease;
+        }
+        #table-container.shifted {
+            left: 241px; width: calc(100% - 220px);
+        }
+        #table-title {
+            margin: 0.5cm 0 10px 10px;
+            color: #e91e63; font-size: 24px;
+        }
+        table {
+            width: 100%; min-width: 600px; border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd; padding: 8px; text-align: left;
+        }
+        th {
+            background-color: #e91e63; color: white;
+            position: sticky; top: 0; z-index: 2;
+        }
+        tr:nth-child(even) { background: #f9f9f9; }
+        tr:hover { background: #f1f1f1; cursor: pointer; }
+        tr.selected { background-color: lightgreen !important; }
+        #image-viewer {
+            position: fixed; bottom: 10px; right: 10px;
+            width: 320px; height: 320px;
+            background: white; box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            overflow: hidden; border-radius: 10px;
+            z-index: 20; display: none; transition: all 0.3s ease;
+        }
+        #image-viewer.fullscreen {
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh; border-radius: 0; z-index: 1000;
+        }
+        #close-btn, #fullscreen-btn {
+            position: absolute; background: #e91e63; color: white;
+            border: none; font-size: 20px; padding: 10px 15px;
+            cursor: pointer; z-index: 1001; border-radius: 5px;
+        }
+        #close-btn { top: 10px; right: 10px; }
+        #fullscreen-btn { top: 10px; left: 10px; }
+        /* Barkod tara butonu stili */
+        #scan-btn {
+            padding: 5px 10px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+    <!-- QR/Barkod taramak için html5-qrcode -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
-  <h1>📷 Arka Kameralı QR Kod Tarayıcı</h1>
-  <div id="reader"></div>
-  <div id="result">Tarama sonucu burada gözükecek</div>
 
-  <script>
-    const resultElem = document.getElementById("result");
+    <div class="navbar">
+        <button class="menu-btn" onclick="toggleMenu()">☰</button>
+        <span>Wink Official</span>
+    </div>
 
-    function onScanSuccess(decodedText, decodedResult) {
-      resultElem.innerText = "✅ Bulunan QR Kod: " + decodedText;
-      // İstersen burada tarama durdurulabilir:
-      // html5QrcodeScanner.clear();
-    }
+    <div id="sideMenu">
+        <div><label for="combo-box1">Mobilya</label><select id="combo-box1"></select></div>
+        <div><label for="combo-box2">Oda</label><select id="combo-box2"></select></div>
+        <div><label for="combo-box3">Mobilya</label><select id="combo-box3"></select></div>
+        <div><label for="combo-box4">Delik</label><select id="combo-box4"></select></div>
+        <div><label for="combo-box5">Material</label><select id="combo-box5"></select></div>
+        <div><label for="combo-box6">Kalinlik</label><select id="combo-box6"></select></div>
+        <div><label for="combo-box7">Reng</label><select id="combo-box7"></select></div>
+        <div><label for="combo-box8">PVC Var?</label><select id="combo-box8"></select></div>
+        <div><label for="combo-box9">Islem Var?</label><select id="combo-box9"></select></div>
+        <div><label for="combo-box10">PVC</label><select id="combo-box10"></select></div>
+        <div><label for="combo-box11">Parca Ismi</label><select id="combo-box11"></select></div>
 
-    function onScanFailure(error) {
-      // Hata mesajlarını sessizce geç
-      // console.warn(`Tarama hatası: ${error}`);
-    }
+        <div class="filter-inputs">
+            <input type="text" id="exact-search" placeholder="Genislik" />
+            <input type="text" id="range-search" placeholder="Yukseklik" />
+        </div>
 
-    // Arka kamerayı seçmek için kamera cihaz listesinden environment olanı seçiyoruz:
-    Html5Qrcode.getCameras().then(cameras => {
-      if (cameras && cameras.length) {
-        // Arka kamera var mı kontrolü:
-        const backCamera = cameras.find(camera => camera.label.toLowerCase().includes("back")) || cameras[0];
+        <!-- BARCOD input + Tara butonu -->
+        <div style="display: flex; gap: 5px; margin-top: 10px;">
+            <input id="search-box" placeholder="BARCOD" />
+            <button id="scan-btn">📷 Tara</button>
+        </div>
+    </div>
 
-        const config = {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          // Kamerayı doğrudan seçiyoruz:
-          cameraId: backCamera.id
-        };
+    <div id="table-container">
+        <h2 id="table-title">Baza</h2>
+        <table id="data-table">
+            <thead><tr></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-        const html5QrcodeScanner = new Html5Qrcode("reader");
-        html5QrcodeScanner.start(
-          backCamera.id,
-          config,
-          onScanSuccess,
-          onScanFailure
-        ).catch(err => {
-          alert("Kamera başlatılamadı: " + err);
+    <div id="image-viewer">
+        <button id="close-btn" onclick="closeViewer(event)">X</button>
+        <button id="fullscreen-btn" onclick="toggleFullscreen(event)">⛶</button>
+    </div>
+
+    <!-- QR/Barkod tarama için gizli container -->
+    <div id="qr-reader"
+         style="width: 300px; height: 300px;
+                position: fixed; bottom: 10px; right: 10px;
+                background: white; z-index: 1000;
+                border: 1px solid #ccc; display: none;"></div>
+
+    <script>
+        const sheetId = "1muERJfee4k6vxP49NkMGUGo0t5RzpMTbszaAQ5KOAqo";
+        const sheetName = "SheetName";
+        const jsonUrl = `https://opensheet.vercel.app/${sheetId}/${sheetName}`;
+        let originalData = [];
+        const visibleCols = 21;
+        let selectedRow = null;
+
+        function toggleMenu() {
+            document.getElementById("sideMenu").classList.toggle("active");
+            document.getElementById("table-container").classList.toggle("shifted");
+        }
+
+        // --- Veri yükleme / tablo doldurma kodları aynen kalıyor ---
+        const comboBoxes = [
+            { id: "combo-box1", cols: [0] },
+            { id: "combo-box2", cols: [1] },
+            { id: "combo-box3", cols: [2] },
+            { id: "combo-box4", cols: [5] },
+            { id: "combo-box5", cols: [6] },
+            { id: "combo-box6", cols: [7] },
+            { id: "combo-box7", cols: [9] },
+            { id: "combo-box8", cols: [12] },
+            { id: "combo-box9", cols: [15] },
+            { id: "combo-box10", cols: [17,18,19,20] },
+            { id: "combo-box11", cols: [4] }
+        ];
+
+        function loadSheetData() {
+            fetch(jsonUrl)
+                .then(r => r.json())
+                .then(data => {
+                    originalData = data;
+                    const thead = document.querySelector("#data-table thead tr");
+                    thead.innerHTML = "";
+                    Object.keys(data[0]).slice(0, visibleCols)
+                        .forEach(h => thead.innerHTML += `<th>${h}</th>`);
+                    thead.innerHTML += "<th></th>";
+                    setupFilters(data);
+                    fillTable(data);
+                })
+                .catch(e => alert(e));
+        }
+        function setupFilters(data) {
+            comboBoxes.forEach(({ id, cols }) => {
+                const sel = document.getElementById(id);
+                sel.innerHTML = `<option value="TÜMÜ">TÜMÜ</option>`;
+                const s = new Set();
+                data.forEach(r => cols.forEach(ci => {
+                    const v = r[Object.keys(r)[ci]];
+                    if (v) s.add(v);
+                }));
+                Array.from(s).sort().forEach(v => {
+                    sel.innerHTML += `<option value="${v}">${v}</option>`;
+                });
+                sel.onchange = applyFilters;
+            });
+            document.getElementById("search-box").oninput = applyFilters;
+            document.getElementById("exact-search").oninput = applyFilters;
+            document.getElementById("range-search").oninput = applyFilters;
+        }
+        function updateComboBoxes(data) {
+            comboBoxes.forEach(({ id, cols }) => {
+                const select = document.getElementById(id);
+                const current = select.value;
+                const values = new Set();
+                data.forEach(r => cols.forEach(ci => {
+                    const v = r[Object.keys(r)[ci]];
+                    if (v) values.add(v);
+                }));
+                select.innerHTML = `<option value="TÜMÜ">TÜMÜ</option>`;
+                Array.from(values).sort().forEach(v => {
+                    select.innerHTML += `<option value="${v}">${v}</option>`;
+                });
+                if ([...select.options].some(o => o.value === current)) {
+                    select.value = current;
+                }
+            });
+        }
+        function fillTable(data) {
+            const tb = document.querySelector("#data-table tbody");
+            tb.innerHTML = "";
+            data.forEach(r => {
+                const tr = document.createElement("tr");
+                const keys = Object.keys(r);
+                if (r[keys[25]]?.toString().trim()) tr.style.backgroundColor = "yellow";
+                keys.slice(0, visibleCols).forEach(k => {
+                    tr.innerHTML += `<td>${r[k]||""}</td>`;
+                });
+                const fileLink = r[keys[23]]||"";
+                const td = document.createElement("td");
+                const btn = document.createElement("button");
+                btn.textContent = " ↓ ";
+                if (!fileLink.trim()) btn.disabled = true;
+                else btn.onclick = e => {
+                    e.stopPropagation();
+                    const id = getFileId(fileLink);
+                    if (id) {
+                        const a = document.createElement('a');
+                        a.href = `https://drive.google.com/uc?export=download&id=${id}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } else alert("Geçerli dosya linki bulunamadı.");
+                };
+                td.appendChild(btn);
+                tr.appendChild(td);
+                tr.onclick = () => {
+                    if (selectedRow) selectedRow.classList.remove('selected');
+                    tr.classList.add('selected');
+                    selectedRow = tr;
+                    showPreview(r[keys[25]]);
+                };
+                tb.appendChild(tr);
+            });
+        }
+        function applyFilters() {
+            const txt      = document.getElementById("search-box").value.toLowerCase();
+            const exactVal = document.getElementById("exact-search").value.trim();
+            const rangeVal = document.getElementById("range-search").value.trim();
+            const rangeNum = parseFloat(rangeVal);
+            const keysAll  = originalData.length ? Object.keys(originalData[0]) : [];
+            let comboFiltered = originalData.filter(r =>
+                comboBoxes.every(({id, cols}) => {
+                    const sel = document.getElementById(id).value;
+                    return sel === "TÜMÜ" || cols.some(ci => r[keysAll[ci]] === sel);
+                })
+            );
+            updateComboBoxes(comboFiltered);
+            let filtered = txt
+                ? comboFiltered.filter(r => r[keysAll[3]]?.toLowerCase().includes(txt))
+                : comboFiltered;
+            if (exactVal) {
+                filtered = filtered.filter(r => {
+                    const v11 = r[keysAll[10]]; const v14 = r[keysAll[13]];
+                    return v11 == exactVal || v14 == exactVal;
+                });
+            }
+            if (!isNaN(rangeNum)) {
+                filtered = filtered.filter(r => {
+                    const v12 = parseFloat(r[keysAll[11]]); const v15 = parseFloat(r[keysAll[14]]);
+                    const ok12 = !isNaN(v12) && Math.abs(v12 - rangeNum) <= 3;
+                    const ok15 = !isNaN(v15) && Math.abs(v15 - rangeNum) <= 3;
+                    return ok12 || ok15;
+                });
+            }
+            fillTable(filtered);
+        }
+        function getFileId(url) {
+            let m = url.match(/\/d\/([^\/]+)\//);
+            if (m) return m[1];
+            m = url.match(/[?&]id=([^&]+)/);
+            return m ? m[1] : null;
+        }
+        function showPreview(url) {
+            const viewer = document.getElementById("image-viewer");
+            const id = getFileId(url);
+            if (id) {
+                viewer.innerHTML = `
+                  <button id="close-btn" onclick="closeViewer(event)">X</button>
+                  <button id="fullscreen-btn" onclick="toggleFullscreen(event)">⛶</button>
+                  <iframe src="https://drive.google.com/file/d/${id}/preview" allow="autoplay"></iframe>`;
+                viewer.style.display = "block";
+            } else viewer.style.display = "none";
+        }
+        function closeViewer(e) {
+            e.stopPropagation();
+            const v = document.getElementById("image-viewer");
+            v.classList.remove("fullscreen");
+            v.style.display = "none";
+        }
+        function toggleFullscreen(e) {
+            e.stopPropagation();
+            document.getElementById("image-viewer").classList.toggle("fullscreen");
+        }
+        loadSheetData();
+
+        // --- BURASI: Barkod Tarayıcı Kısmı ---
+        const scanBtn     = document.getElementById("scan-btn");
+        const qrReader    = document.getElementById("qr-reader");
+        const barcodInput = document.getElementById("search-box");
+        let html5QrCode;
+
+        scanBtn.addEventListener("click", () => {
+            if (qrReader.style.display === "none") {
+                qrReader.style.display = "block";
+                html5QrCode = new Html5Qrcode("qr-reader");
+                Html5Qrcode.getCameras().then(cameras => {
+                    if (cameras && cameras.length) {
+                        // Arka kamerayı seç
+                        let cameraId = cameras[0].id;
+                        cameras.forEach(cam => {
+                            if (cam.label.toLowerCase().includes("back") || cam.label.toLowerCase().includes("rear")) {
+                                cameraId = cam.id;
+                            }
+                        });
+                        html5QrCode.start(
+                            cameraId,
+                            { fps: 10, qrbox: 250 },
+                            qrCodeMessage => {
+                                barcodInput.value = qrCodeMessage;
+                                stopScanner();
+                            },
+                            _errorMessage => {}
+                        ).catch(err => {
+                            alert("Kamera başlatılamadı: " + err);
+                            stopScanner();
+                        });
+                    }
+                }).catch(err => {
+                    alert("Kamera listesi alınamadı: " + err);
+                });
+            } else {
+                stopScanner();
+            }
         });
 
-      } else {
-        alert("Cihazda kamera bulunamadı!");
-      }
-    }).catch(err => {
-      alert("Kamera bilgisi alınamadı: " + err);
-    });
-  </script>
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    qrReader.style.display = "none";
+                }).catch(() => {
+                    qrReader.style.display = "none";
+                });
+            } else {
+                qrReader.style.display = "none";
+            }
+        }
+    </script>
 </body>
 </html>
